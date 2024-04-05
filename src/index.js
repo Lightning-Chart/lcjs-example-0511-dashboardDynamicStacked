@@ -6,7 +6,9 @@ const { lightningChart, emptyFill, emptyLine, transparentFill, Themes, AxisTickS
     lcjs
 const { createProgressiveTraceGenerator } = xydata
 
-const lc = lightningChart()
+const lc = lightningChart({
+            resourcesBaseUrl: new URL(document.head.baseURI).origin + new URL(document.head.baseURI).pathname + 'resources/',
+        })
 const layout = document.createElement('div')
 const domContainer = document.getElementById('chart') || document.body
 if (domContainer === document.body) {
