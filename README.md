@@ -23,23 +23,6 @@ _Re-arrangeable Dashboard example._
 
 This example shows how to create a Dashboard with a number of channels which you can re-arrange using drag & drop or hide/show using the legend.
 
-![Hide charts using legend, rearrange charts with drag & drop](./assets/interactions.gif)
-
-Note that this example doesn't actually use the built-in "Dashboard" feature.
-Instead, it relies on WebGL context sharing, a new capability added in LightningChart JS v5.0.0.
-This lets the user use CSS layouts to control the position, size and visibility of as many charts as needed while enjoying the traditional performance advantages of LightningChart Dashboards.
-
-Using shared WebGL contexts is as simple as creating all charts using the same `LightningChart` instance:
-
-```ts
-const lc = lightningChart()
-const chart1 = lc.ChartXY()
-const chart2 = lc.ChartXY()
-...
-```
-
-For more information, refer to ["Grouping charts"](https://lightningchart.com/js-charts/docs/basic-topics/grouping-charts/) section in [Developer Documentation](https://lightningchart.com/js-charts/docs/basic-topics/).
-
 
 ## API Links
 
@@ -69,7 +52,7 @@ Direct developer email support can be purchased through a [Support Plan][4] or b
 © LightningChart Ltd 2009-2022. All rights reserved.
 
 
-[XY cartesian chart]: https://lightningchart.com/js-charts/api-documentation/v5.1.0/classes/ChartXY.html
-[Line series]: https://lightningchart.com/js-charts/api-documentation/v5.1.0/classes/LineSeries.html
-[Axis]: https://lightningchart.com/js-charts/api-documentation/v5.1.0/classes/Axis.html
+[XY cartesian chart]: https://lightningchart.com/js-charts/api-documentation/v5.2.0/classes/ChartXY.html
+[Line series]: https://lightningchart.com/js-charts/api-documentation/v5.2.0/classes/LineSeries.html
+[Axis]: https://lightningchart.com/js-charts/api-documentation/v5.2.0/classes/Axis.html
 

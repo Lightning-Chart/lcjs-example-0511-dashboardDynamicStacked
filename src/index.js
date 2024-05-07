@@ -2,59 +2,29 @@
 
 const lcjs = require('@arction/lcjs')
 const xydata = require('@arction/xydata')
-const { lightningChart, emptyFill, emptyLine, transparentFill, Themes, AxisTickStrategies, synchronizeAxisIntervals, LegendBoxBuilders } =
-    lcjs
+const { lightningChart, emptyFill, Themes, AxisTickStrategies } = lcjs
 const { createProgressiveTraceGenerator } = xydata
 
 const lc = lightningChart({
             resourcesBaseUrl: new URL(document.head.baseURI).origin + new URL(document.head.baseURI).pathname + 'resources/',
         })
-const layout = document.createElement('div')
-const domContainer = document.getElementById('chart') || document.body
-if (domContainer === document.body) {
-    document.body.style.width = '100vw'
-    document.body.style.height = '100vh'
-    document.body.style.margin = '0px'
-}
-domContainer.append(layout)
-layout.style.width = '100%'
-layout.style.height = '100%'
-layout.style.display = 'flex'
-layout.style.flexDirection = 'column'
+const chart = lc
+    .ChartXY({
+        theme: Themes[new URLSearchParams(window.location.search).get('theme') || 'darkGold'] || undefined,
+    })
+    .setTitle('Drag & drop Y axes to rearrange')
 
-const uiPanelContainer = document.createElement('div')
-uiPanelContainer.style.height = '40px'
-layout.append(uiPanelContainer)
-const uiPanel = lc.UIPanel({
-    container: uiPanelContainer,
-    theme: Themes[new URLSearchParams(window.location.search).get('theme') || 'darkGold'] || undefined,
-})
-const legend = uiPanel
-    .addLegendBox(LegendBoxBuilders.HorizontalLegendBox)
-    .setTitle('')
-    .setBackground((background) => background.setFillStyle(emptyFill).setStrokeStyle(emptyLine))
+const axisX = chart.getDefaultAxisX().setTickStrategy(AxisTickStrategies.Time)
 
-let channels = new Array(5).fill(0).map((_, i) => {
-    // 40px is height of UIPanel
-    // 5 is number of channels
-    const parentHeight = domContainer.getBoundingClientRect().height
-    const divHeight = (parentHeight - 40) / 5 + 'px'
-
+chart.getDefaultAxisY().dispose()
+let channels = new Array(5).fill(0).map((_, i, arr) => {
     const name = `Channel #${i + 1}`
-    const container = document.createElement('div')
-    container.style.height = divHeight
-    layout.append(container)
-    const chart = lc
-        .ChartXY({
-            container,
-            // theme: Themes.darkGold
-        })
-        .setTitle('')
-        .setPadding({ right: 60 })
-        .setAutoCursor((cursor) => cursor.setTickMarkerXVisible(false))
-    const axisX = chart.getDefaultAxisX()
-    const axisY = chart.getDefaultAxisY().setTitle(name).setThickness(80)
-    const lineSeries = chart.addLineSeries({ dataPattern: { pattern: 'ProgressiveX' }, automaticColorIndex: i }).setName(name)
+    const iStack = arr.length - (i + 1)
+    const axisY = chart.addAxisY({ iStack }).setMargins(10, 10)
+    const lineSeries = chart
+        .addPointLineAreaSeries({ axisY, dataPattern: 'ProgressiveX', automaticColorIndex: i })
+        .setName(name)
+        .setAreaFillStyle(emptyFill)
 
     createProgressiveTraceGenerator()
         .setNumberOfPoints(100_000)
@@ -64,83 +34,56 @@ let channels = new Array(5).fill(0).map((_, i) => {
             lineSeries.add(data)
         })
 
-    // Match LineSeries visibility with that of whole channel and chart.
+    // Match LineSeries visibility with its Y axis
     lineSeries.onVisibleStateChanged((_, isVisible) => {
-        container.style.display = isVisible ? 'block' : 'none'
-        ch.visible = isVisible
-        checkBottomChChanged()
+        axisY.setVisible(isVisible)
     })
-    legend.add(lineSeries)
-    container.draggable = true
-    container.ondragstart = (event) => event.dataTransfer.setData('text', ch.position)
-    container.ondragover = (event) => event.preventDefault()
-    container.ondrop = (event) => {
-        event.preventDefault()
-        const positionSrc = Number(event.dataTransfer.getData('text'))
-        const chSrc = channels.find((item) => item.position === positionSrc)
-        const chTar = ch
-        if (chSrc === chTar) {
-            return
-        }
-        const domPositionSrc = chSrc.position + 1 // +1 because of UIPanel
-        const domPositionTar = chTar.position + 1 // +1 because of UIPanel
-        swapChildren(layout, domPositionSrc, domPositionTar)
-        chSrc.position = chTar.position
-        chTar.position = positionSrc
-        channels.sort((a, b) => a.position - b.position)
-        checkBottomChChanged()
-    }
-    const ch = { name, visible: true, container, chart, axisX, axisY, lineSeries, position: i }
+
+    const ch = { name, axisY, lineSeries }
     return ch
 })
 
-synchronizeAxisIntervals(...channels.map((ch) => ch.axisX))
-const theme = channels[0].chart.getTheme()
-
-const checkBottomChChanged = () => {
-    const lastVisibleCh = channels
-        .slice()
-        .reverse()
-        .find((ch) => ch.visible)
-    channels.forEach((ch, i) => {
-        ch.axisX
-            .setTickStrategy(AxisTickStrategies.Time, (ticks) =>
-                ch === lastVisibleCh
-                    ? ticks
-                          .setMajorTickStyle((major) =>
-                              major
-                                  .setLabelFillStyle(theme.xAxisTimeTicks.majorTickStyle.labelFillStyle)
-                                  .setTickStyle(theme.xAxisTimeTicks.majorTickStyle.tickStyle),
-                          )
-                          .setMinorTickStyle((minor) =>
-                              minor
-                                  .setLabelFillStyle(theme.xAxisTimeTicks.minorTickStyle.labelFillStyle)
-                                  .setTickStyle(theme.xAxisTimeTicks.minorTickStyle.tickStyle),
-                          )
-                    : ticks
-                          .setMajorTickStyle((major) => major.setLabelFillStyle(transparentFill).setTickStyle(emptyLine))
-                          .setMinorTickStyle((minor) => minor.setLabelFillStyle(transparentFill).setTickStyle(emptyLine)),
-            )
-            .setStrokeStyle(ch === lastVisibleCh ? theme.xAxisStrokeStyle : emptyLine)
-            .setThickness(ch === lastVisibleCh ? { min: undefined, max: undefined } : 0)
+//
+//
+// Drag & drop axis rearrange logic:
+// LC Axis/chart currently don't expose HTML `draggable` property and `ondrop` event, so to implement drag & drop we need to create HTML div overlays as drag & drop source and target.
+chart.forEachAxisY((axis) => axis.setMouseInteractions(false))
+const chOverlays = channels.map((ch) => {
+    const overlay = document.createElement('div')
+    chart.engine.container.append(overlay)
+    overlay.style.position = 'fixed'
+    overlay.style.width = '100px'
+    overlay.style.zIndex = '1000'
+    overlay.style.cursor = 'grab'
+    const positionOverlay = () => {
+        requestAnimationFrame(() => {
+            const interval = ch.axisY.getInterval()
+            const startClient = chart.translateCoordinate({ x: 0, y: interval.start }, { x: axisX, y: ch.axisY }, chart.coordsClient)
+            const endClient = chart.translateCoordinate({ x: 0, y: interval.end }, { x: axisX, y: ch.axisY }, chart.coordsClient)
+            overlay.style.top = `${endClient.clientY}px`
+            overlay.style.height = `${startClient.clientY - endClient.clientY}px`
+        })
+    }
+    positionOverlay()
+    ch.axisY.onIntervalChange(positionOverlay)
+    ch.axisY.onVisibleStateChanged((_, isVisible) => {
+        overlay.style.display = isVisible ? 'block' : 'none'
+        chOverlays.forEach((overlay) => overlay.positionOverlay())
     })
-}
-checkBottomChChanged()
+    chart.onResize(positionOverlay)
 
-// Davide Cannizzo https://stackoverflow.com/a/64647505/9288063
-function swapChildren(parentElement, index1, index2) {
-    if (index1 === index2) return
-    if (index1 > index2) {
-        const temp = index1
-        index1 = index2
-        index2 = temp
+    overlay.draggable = true
+    overlay.ondragstart = (event) => {
+        event.dataTransfer.setData('text', ch.name)
     }
-    const { [index1]: element1, [index2]: element2 } = parentElement.childNodes
-    if (index2 === index1 + 1) {
-        parentElement.insertBefore(element2, element1)
-    } else {
-        const reference = element2.nextSibling
-        parentElement.replaceChild(element2, element1)
-        parentElement.insertBefore(element1, reference)
+    overlay.ondragover = (event) => {
+        event.preventDefault()
     }
-}
+    overlay.ondrop = (event) => {
+        event.preventDefault()
+        const nameSrc = event.dataTransfer.getData('text')
+        const axisSrc = channels.find((ch) => ch.name === nameSrc).axisY
+        chart.swapAxes(ch.axisY, axisSrc)
+    }
+    return { positionOverlay }
+})
