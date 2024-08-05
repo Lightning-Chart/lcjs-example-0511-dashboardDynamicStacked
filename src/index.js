@@ -1,7 +1,7 @@
 // Example of a Dashboard with several channels which you can re-arrange with drag & drop and hide/show at will
 
-const lcjs = require('@arction/lcjs')
-const xydata = require('@arction/xydata')
+const lcjs = require('@lightningchart/lcjs')
+const xydata = require('@lightningchart/xydata')
 const { lightningChart, emptyFill, Themes, AxisTickStrategies } = lcjs
 const { createProgressiveTraceGenerator } = xydata
 
@@ -84,6 +84,7 @@ const chOverlays = channels.map((ch) => {
         const nameSrc = event.dataTransfer.getData('text')
         const axisSrc = channels.find((ch) => ch.name === nameSrc).axisY
         chart.swapAxes(ch.axisY, axisSrc)
+        chOverlays.forEach((item) => item.positionOverlay())
     }
     return { positionOverlay }
 })
