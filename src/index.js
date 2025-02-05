@@ -20,7 +20,7 @@ chart.getDefaultAxisY().dispose()
 let channels = new Array(5).fill(0).map((_, i, arr) => {
     const name = `Channel #${i + 1}`
     const iStack = arr.length - (i + 1)
-    const axisY = chart.addAxisY({ iStack }).setMargins(10, 10)
+    const axisY = chart.addAxisY({ iStack }).setMargins(5, 5)
     const lineSeries = chart
         .addPointLineAreaSeries({ axisY, dataPattern: 'ProgressiveX', automaticColorIndex: i })
         .setName(name)
@@ -35,56 +35,29 @@ let channels = new Array(5).fill(0).map((_, i, arr) => {
         })
 
     // Match LineSeries visibility with its Y axis
-    lineSeries.onVisibleStateChanged((_, isVisible) => {
+    lineSeries.addEventListener('visiblechange', (event) => {
+        const { isVisible } = event
         axisY.setVisible(isVisible)
     })
 
+    // Drag & drop logic for Y axis
+    axisY.setUserInteractions({ rectangleZoom: false })
+    axisY.draggable = true
+    axisY.addEventListener('dragstart', (event) => {
+        if (!event.dataTransfer) return
+        event.dataTransfer.setData('text', JSON.stringify({ name }))
+        event.dataTransfer.setDragImage(new Image(), 0, 0)
+    })
+    axisY.addEventListener('dragover', (event) => {
+        event.preventDefault()
+    })
+    axisY.addEventListener('drop', (event) => {
+        if (!event.dataTransfer) return
+        const srcName = JSON.parse(event.dataTransfer.getData('text')).name
+        if (!srcName) return
+        const srcCh = channels.find((item) => item.name === srcName)
+        chart.swapAxes(axisY, srcCh.axisY)
+    })
     const ch = { name, axisY, lineSeries }
     return ch
-})
-
-//
-//
-// Drag & drop axis rearrange logic:
-// LC Axis/chart currently don't expose HTML `draggable` property and `ondrop` event, so to implement drag & drop we need to create HTML div overlays as drag & drop source and target.
-chart.forEachAxisY((axis) => axis.setMouseInteractions(false))
-const chOverlays = channels.map((ch) => {
-    const overlay = document.createElement('div')
-    chart.engine.container.append(overlay)
-    overlay.style.position = 'fixed'
-    overlay.style.width = '100px'
-    overlay.style.zIndex = '1000'
-    overlay.style.cursor = 'grab'
-    const positionOverlay = () => {
-        requestAnimationFrame(() => {
-            const interval = ch.axisY.getInterval()
-            const startClient = chart.translateCoordinate({ x: 0, y: interval.start }, { x: axisX, y: ch.axisY }, chart.coordsClient)
-            const endClient = chart.translateCoordinate({ x: 0, y: interval.end }, { x: axisX, y: ch.axisY }, chart.coordsClient)
-            overlay.style.top = `${endClient.clientY}px`
-            overlay.style.height = `${startClient.clientY - endClient.clientY}px`
-        })
-    }
-    positionOverlay()
-    ch.axisY.onIntervalChange(positionOverlay)
-    ch.axisY.onVisibleStateChanged((_, isVisible) => {
-        overlay.style.display = isVisible ? 'block' : 'none'
-        chOverlays.forEach((overlay) => overlay.positionOverlay())
-    })
-    chart.onResize(positionOverlay)
-
-    overlay.draggable = true
-    overlay.ondragstart = (event) => {
-        event.dataTransfer.setData('text', ch.name)
-    }
-    overlay.ondragover = (event) => {
-        event.preventDefault()
-    }
-    overlay.ondrop = (event) => {
-        event.preventDefault()
-        const nameSrc = event.dataTransfer.getData('text')
-        const axisSrc = channels.find((ch) => ch.name === nameSrc).axisY
-        chart.swapAxes(ch.axisY, axisSrc)
-        chOverlays.forEach((item) => item.positionOverlay())
-    }
-    return { positionOverlay }
 })
