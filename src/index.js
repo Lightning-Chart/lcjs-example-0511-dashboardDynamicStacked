@@ -22,16 +22,15 @@ let channels = new Array(5).fill(0).map((_, i, arr) => {
     const iStack = arr.length - (i + 1)
     const axisY = chart.addAxisY({ iStack }).setMargins(5, 5)
     const lineSeries = chart
-        .addPointLineAreaSeries({ axisY, dataPattern: 'ProgressiveX', automaticColorIndex: i })
+        .addLineSeries({ axisY, schema: { x: { pattern: 'progressive' }, y: { pattern: null } }, automaticColorIndex: i })
         .setName(name)
-        .setAreaFillStyle(emptyFill)
 
     createProgressiveTraceGenerator()
         .setNumberOfPoints(100_000)
         .generate()
         .toPromise()
         .then((data) => {
-            lineSeries.add(data)
+            lineSeries.appendJSON(data)
         })
 
     // Match LineSeries visibility with its Y axis
